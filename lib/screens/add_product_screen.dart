@@ -41,14 +41,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _saving = true);
     final rm = StorageService.getCurrentRoom();
     await Hive.box<ProductModel>('products').add(ProductModel(
-      id: const Uuid().v4(), roomId: rm?.id ?? 'global',
-      sellerId: StorageService.getDeviceId(),
-      sellerNick: StorageService.getNickname() ?? 'User',
-      title: _ttl.text.trim(), description: _dsc.text.trim(),
-      price: double.tryParse(_prc.text.replaceAll(',', '.')) ?? 0,
-      createdAt: DateTime.now(),
-      expiresAt: DateTime.now().add(const Duration(hours: 48)),
-      imagePaths: _imgs, category: _cat));
+        id: const Uuid().v4(), roomId: rm?.id ?? 'global',
+        sellerId: StorageService.getDeviceId(),
+        sellerNick: StorageService.getNickname() ?? 'User',
+        title: _ttl.text.trim(), description: _dsc.text.trim(),
+        price: double.tryParse(_prc.text.replaceAll(',', '.')) ?? 0,
+        createdAt: DateTime.now(),
+        expiresAt: DateTime.now().add(const Duration(hours: 48)),
+        imagePaths: _imgs, category: _cat));
     setState(() => _saving = false);
     if (mounted) Navigator.pop(context);
   }
@@ -67,50 +67,50 @@ class _AddProductScreenState extends State<AddProductScreen> {
           SizedBox(height: 100, child: ListView(scrollDirection: Axis.horizontal, children: [
             ..._imgs.map((p) => Stack(children: [
               Container(width: 90, height: 90, margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
-                    image: DecorationImage(image: FileImage(File(p)), fit: BoxFit.cover))),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
+                      image: DecorationImage(image: FileImage(File(p)), fit: BoxFit.cover))),
               Positioned(top: 2, right: 10,
-                child: GestureDetector(onTap: () => setState(() => _imgs.remove(p)),
-                  child: Container(padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white)))),
+                  child: GestureDetector(onTap: () => setState(() => _imgs.remove(p)),
+                      child: Container(padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                          child: const Icon(Icons.close, size: 14, color: Colors.white)))),
             ])),
             if (_imgs.length < 3)
               GestureDetector(onTap: _addImg,
-                child: Container(width: 90, height: 90,
-                  decoration: BoxDecoration(color: AppTheme.surfaceLight,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.primary.withOpacity(0.4))),
-                  child: const Icon(Icons.add_photo_alternate_outlined,
-                      color: AppTheme.primary, size: 32))),
+                  child: Container(width: 90, height: 90,
+                      decoration: BoxDecoration(color: AppTheme.surfaceLight,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.primary.withOpacity(0.4))),
+                      child: const Icon(Icons.add_photo_alternate_outlined,
+                          color: AppTheme.primary, size: 32))),
           ])),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(value: _cat,
-            decoration: const InputDecoration(labelText: 'Categoria'),
-            items: _cats.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-            onChanged: (v) => setState(() => _cat = v!)),
+              decoration: const InputDecoration(labelText: 'Categoria'),
+              items: _cats.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              onChanged: (v) => setState(() => _cat = v!)),
           const SizedBox(height: 12),
           TextFormField(controller: _ttl,
-            decoration: const InputDecoration(labelText: 'Titulo do produto'),
-            validator: (v) => v?.trim().isEmpty == true ? 'Obrigatorio' : null),
+              decoration: const InputDecoration(labelText: 'Titulo do produto'),
+              validator: (v) => v?.trim().isEmpty == true ? 'Obrigatorio' : null),
           const SizedBox(height: 12),
           TextFormField(controller: _dsc, maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Descricao',
-                hintText: 'Descreva brevemente...'),
-            validator: (v) => v?.trim().isEmpty == true ? 'Obrigatorio' : null),
+              decoration: const InputDecoration(labelText: 'Descricao',
+                  hintText: 'Descreva brevemente...'),
+              validator: (v) => v?.trim().isEmpty == true ? 'Obrigatorio' : null),
           const SizedBox(height: 12),
           TextFormField(controller: _prc,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Preco (R$)', prefixText: 'R$ '),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Informe o preco';
-              if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Invalido';
-              return null;
-            }),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Preco (R\$)', prefixText: 'R\$ '),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Informe o preco';
+                if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Invalido';
+                return null;
+              }),
           const SizedBox(height: 32),
           SizedBox(width: double.infinity, child: ElevatedButton.icon(
-            icon: const Icon(Icons.check), label: const Text('Publicar Anuncio'),
-            onPressed: _saving ? null : _save)),
+              icon: const Icon(Icons.check), label: const Text('Publicar Anuncio'),
+              onPressed: _saving ? null : _save)),
           const SizedBox(height: 8),
           Center(child: Text('Expira em 48h automaticamente',
               style: TextStyle(fontSize: 11, color: AppTheme.textSecondary,
