@@ -57,7 +57,7 @@ class ProductCard extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         maxLines: 2, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
-                      Text('R$ ${product.price.toStringAsFixed(2)}',
+                      Text('R\$ ' + product.price.toStringAsFixed(2),
                         style: const TextStyle(color: AppTheme.primary,
                           fontWeight: FontWeight.w800, fontSize: 15)),
                       const SizedBox(height: 2),
