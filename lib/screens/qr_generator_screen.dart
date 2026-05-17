@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:share_plus/share_plus.dart';
@@ -7,77 +8,153 @@ import '../models/room_model.dart';
 import '../services/storage_service.dart';
 
 class QrGeneratorScreen extends StatefulWidget {
-  const QrGeneratorScreen({super.key});
-  @override State<QrGeneratorScreen> createState() => _QrGeneratorScreenState();
+    const QrGeneratorScreen({super.key});
+    @override State<QrGeneratorScreen> createState() => _QrGeneratorScreenState();
 }
 
 class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
-  final _nameCtrl = TextEditingController();
-  RoomType _type = RoomType.bairro;
-  String? _qr, _id, _name;
+    final _nameCtrl = TextEditingController();
+    RoomType _type = RoomType.bairro;
+    String? _qr, _id, _name;
+    bool _isCreator = false;
 
-  void _generate() {
-    if (_nameCtrl.text.trim().isEmpty) return;
-    final id = const Uuid().v4().substring(0, 12);
-    final name = _nameCtrl.text.trim();
-    final qr = 'mesh://${_type.name}-$id';
-    StorageService.saveRoom(RoomModel(
-        id: id, name: name, type: _type.name, qrData: qr, createdAt: DateTime.now()));
-    setState(() { _qr = qr; _id = id; _name = name; });
-  }
+    void _generate() {
+          if (_nameCtrl.text.trim().isEmpty) return;
+          final id = const Uuid().v4().substring(0, 12);
+          final name = _nameCtrl.text.trim();
+          final qr = 'mesh://${_type.name}-$id';
+          final room = RoomModel(
+                  id: id, name: name, type: _type.name, qrData: qr, createdAt: DateTime.now(),
+                  creatorId: StorageService.getDeviceId(),
+                );
+          StorageService.saveRoom(room);
+          setState(() { _qr = qr; _id = id; _name = name; _isCreator = true; });
+    }
 
-  @override void dispose() { _nameCtrl.dispose(); super.dispose(); }
+    void _deleteRoom() {
+          showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                            title: const Text('Apagar Sala?'),
+                            content: Text('Tem certeza que deseja apagar a sala "$_name"? Esta acao nao pode ser desfeita.'),
+                            actions: [
+                                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                                        TextButton(
+                                                      onPressed: () {
+                                                                      if (_id != null) StorageService.deleteRoom(_id!);
+                                                                      Navigator.pop(context);
+                                                                      Navigator.pop(context);
+                                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                                                        const SnackBar(content: Text('Sala apagada com sucesso!')));
+                                                      },
+                                                      child: const Text('Apagar', style: TextStyle(color: Colors.red)),
+                                                    ),
+                                      ],
+                          ),
+                );
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Criar Sala')),
-      body: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Tipo de ambiente', style: TextStyle(fontWeight: FontWeight.w600,
-              fontSize: 14, color: AppTheme.textSecondary)),
-          const SizedBox(height: 10),
-          SizedBox(height: 48, child: ListView(scrollDirection: Axis.horizontal,
-            children: RoomType.values.map((t) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text('${t.emoji} ${t.label}'), selected: _type == t,
-                onSelected: (_) => setState(() => _type = t),
-                selectedColor: AppTheme.primary,
-                labelStyle: TextStyle(
-                    color: _type == t ? Colors.black : AppTheme.textPrimary, fontSize: 12)),
-            )).toList())),
-          const SizedBox(height: 20),
-          TextField(controller: _nameCtrl, decoration: const InputDecoration(
-            labelText: 'Nome da sala',
-            hintText: 'Ex: Bairro Centro, Show Rock...',
-            prefixIcon: Icon(Icons.location_on_outlined))),
-          const SizedBox(height: 20),
-          SizedBox(width: double.infinity, child: ElevatedButton.icon(
-            icon: const Icon(Icons.qr_code),
-            label: const Text('Gerar QR Code'), onPressed: _generate)),
-          if (_qr != null) ...[
-            const SizedBox(height: 32),
-            Center(child: Column(children: [
-              Text(_name ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text('${_type.emoji} ${_type.label}',
-                  style: const TextStyle(color: AppTheme.textSecondary)),
-              const SizedBox(height: 20),
-              Container(padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                child: QrImageView(data: _qr!, version: QrVersions.auto,
-                    size: 220, backgroundColor: Colors.white)),
-              const SizedBox(height: 12),
-              Text(_qr!, style: const TextStyle(fontSize: 11,
-                  color: AppTheme.textSecondary, fontFamily: 'monospace')),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.share),
-                label: const Text('Compartilhar'),
-                onPressed: () => Share.share(
-                    'Entre na sala "$_name" no Netcode!\n\n$_qr')),
-            ])),
-          ],
-        ])));
-  }
+    void _shareRoom() {
+          if (_qr == null) return;
+          final link = 'netcode://sala/$_id';
+          Share.share('Entre na sala "$_name" no Netcode!\n\nLink: $link\n\nQR Data: $_qr');
+    }
+
+    void _copyLink() {
+          if (_id == null) return;
+          final link = 'netcode://sala/$_id';
+          Clipboard.setData(ClipboardData(text: link));
+          ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Link copiado!')));
+    }
+
+    @override void dispose() { _nameCtrl.dispose(); super.dispose(); }
+
+    @override
+    Widget build(BuildContext context) {
+          return Scaffold(
+                  appBar: AppBar(
+                            title: const Text('Criar Sala'),
+                            actions: [
+                                        if (_qr != null && _isCreator)
+                                          IconButton(
+                                                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                                          tooltip: 'Apagar Sala',
+                                                          onPressed: _deleteRoom,
+                                                        ),
+                                      ],
+                          ),
+                  body: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        const Text('Tipo de ambiente', style: TextStyle(fontWeight: FontWeight.w600,
+                                                                                                    fontSize: 14, color: AppTheme.textSecondary)),
+                                        const SizedBox(height: 10),
+                                        SizedBox(height: 48, child: ListView(scrollDirection: Axis.horizontal,
+                                                                                         children: RoomType.values.map((t) => Padding(
+                                                                                                         padding: const EdgeInsets.only(right: 8),
+                                                                                                         child: ChoiceChip(
+                                                                                                                           label: Text('${t.emoji} ${t.label}'), selected: _type == t,
+                                                                                                                           onSelected: (_) => setState(() => _type = t),
+                                                                                                                           selectedColor: AppTheme.primary,
+                                                                                                                           labelStyle: TextStyle(
+                                                                                                                                               color: _type == t ? Colors.black : AppTheme.textPrimary, fontSize: 12)),
+                                                                                                       )).toList())),
+                                        const SizedBox(height: 20),
+                                        TextField(controller: _nameCtrl, decoration: const InputDecoration(
+                                                      labelText: 'Nome da sala',
+                                                      hintText: 'Ex: Bairro Centro, Show Rock...',
+                                                      prefixIcon: Icon(Icons.location_on_outlined))),
+                                        const SizedBox(height: 20),
+                                        SizedBox(width: double.infinity, child: ElevatedButton.icon(
+                                                      icon: const Icon(Icons.qr_code),
+                                                      label: const Text('Gerar QR Code'), onPressed: _generate)),
+                                        if (_qr != null) ...[
+                                                      const SizedBox(height: 32),
+                                                      Center(child: Column(children: [
+                                                                      Text(_name ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                                                      const SizedBox(height: 4),
+                                                                      Text('${_type.emoji} ${_type.label}',
+                                                                                           style: const TextStyle(color: AppTheme.textSecondary)),
+                                                                      const SizedBox(height: 20),
+                                                                      Container(padding: const EdgeInsets.all(16),
+                                                                                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                                                                                                child: QrImageView(data: _qr!, version: QrVersions.auto,
+                                                                                                                                     size: 220, backgroundColor: Colors.white)),
+                                                                      const SizedBox(height: 12),
+                                                                      Text(_qr!, style: const TextStyle(fontSize: 11,
+                                                                                                                        color: AppTheme.textSecondary, fontFamily: 'monospace')),
+                                                                      const SizedBox(height: 16),
+                                                                      // Botoes de compartilhamento (qualquer membro da sala pode usar)
+                                                                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                                                                        ElevatedButton.icon(
+                                                                                                            icon: const Icon(Icons.share),
+                                                                                                            label: const Text('Compartilhar'),
+                                                                                                            onPressed: _shareRoom),
+                                                                                        const SizedBox(width: 12),
+                                                                                        OutlinedButton.icon(
+                                                                                                            icon: const Icon(Icons.link),
+                                                                                                            label: const Text('Copiar Link'),
+                                                                                                            onPressed: _copyLink),
+                                                                                      ]),
+                                                                      const SizedBox(height: 8),
+                                                                      const Text('Qualquer membro pode compartilhar o QR Code ou link',
+                                                                                                 style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                                                                                 textAlign: TextAlign.center),
+                                                                      if (_isCreator) ...[
+                                                                                        const SizedBox(height: 16),
+                                                                                        OutlinedButton.icon(
+                                                                                                            style: OutlinedButton.styleFrom(
+                                                                                                                                  side: const BorderSide(color: Colors.red),
+                                                                                                                                  foregroundColor: Colors.red),
+                                                                                                            icon: const Icon(Icons.delete_outline),
+                                                                                                            label: const Text('Apagar Sala'),
+                                                                                                            onPressed: _deleteRoom),
+                                                                                        const SizedBox(height: 4),
+                                                                                        const Text('Apenas o criador pode apagar a sala',
+                                                                                                                     style: TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+                                                                                      ],
+                                                                    ])),
+                                                    ],
+                                      ])));
+    }
 }
