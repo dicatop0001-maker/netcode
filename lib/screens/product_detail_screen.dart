@@ -73,7 +73,7 @@ class ProductDetailScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Center(child: Text(
-                  '${product.imagePaths.length} fotos - deslize para ver mais',
+                  product.imagePaths.length.toString() + ' fotos - deslize para ver mais',
                   style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary))),
               ),
 
@@ -100,12 +100,12 @@ class ProductDetailScreen extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   // Preco
-                  Text('R$ ${product.price.toStringAsFixed(2)}',
+                  Text('R\$ ' + product.price.toStringAsFixed(2),
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900,
                       color: AppTheme.primary)),
                   const SizedBox(height: 16),
 
-                  // Localização
+                  // Localizacao
                   if (product.bairro.isNotEmpty || product.cidade.isNotEmpty) ...[
                     const Divider(),
                     const SizedBox(height: 8),
@@ -146,8 +146,8 @@ class ProductDetailScreen extends StatelessWidget {
                       children: [
                         Text(product.sellerNick,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        Text('Anunciante na rede local',
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                        const Text('Anunciante na rede local',
+                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
                       ],
                     )),
                   ]),
@@ -160,13 +160,13 @@ class ProductDetailScreen extends StatelessWidget {
                     const Icon(Icons.access_time_outlined, size: 14, color: AppTheme.textSecondary),
                     const SizedBox(width: 4),
                     Text(
-                      'Publicado em ${_formatDate(product.createdAt)}',
+                      'Publicado em ' + _formatDate(product.createdAt),
                       style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
                     const Spacer(),
                     const Icon(Icons.timer_outlined, size: 14, color: AppTheme.textSecondary),
                     const SizedBox(width: 4),
                     Text(
-                      'Expira em ${_formatDate(product.expiresAt)}',
+                      'Expira em ' + _formatDate(product.expiresAt),
                       style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
                   ]),
                   const SizedBox(height: 24),
@@ -194,7 +194,7 @@ class ProductDetailScreen extends StatelessWidget {
                       )),
                     ]),
                     const SizedBox(height: 8),
-                    Center(child: Text('Apenas voce pode editar ou apagar este anuncio',
+                    const Center(child: Text('Apenas voce pode editar ou apagar este anuncio',
                       style: TextStyle(fontSize: 10, color: AppTheme.textSecondary,
                         fontStyle: FontStyle.italic))),
                   ],
@@ -209,7 +209,9 @@ class ProductDetailScreen extends StatelessWidget {
   }
 
   String _formatDate(DateTime dt) {
-    return '${dt.day.toString().padLeft(2,'0')}/${dt.month.toString().padLeft(2,'0')}/${dt.year}';
+    return dt.day.toString().padLeft(2, '0') + '/' +
+      dt.month.toString().padLeft(2, '0') + '/' +
+      dt.year.toString();
   }
 
   void _confirmDelete(BuildContext context) {
@@ -217,7 +219,7 @@ class ProductDetailScreen extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Apagar Anuncio?'),
-        content: Text('Deseja apagar o anuncio "${product.title}"?'),
+        content: Text('Deseja apagar o anuncio "' + product.title + '"?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           TextButton(
