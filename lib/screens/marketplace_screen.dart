@@ -12,7 +12,7 @@ class MarketplaceScreen extends StatelessWidget {
     @override
     Widget build(BuildContext context) {
           return Scaffold(
-                  appBar: AppBar(title: const Text('Parque Place Local'), automaticallyImplyLeading: false),
+                  appBar: AppBar(title: const Text('Compra e Venda Local'), automaticallyImplyLeading: false),
                   body: ValueListenableBuilder(
                             valueListenable: Hive.box<ProductModel>('products').listenable(),
                             builder: (_, box, __) {
