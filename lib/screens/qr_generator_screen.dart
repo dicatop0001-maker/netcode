@@ -75,14 +75,12 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
               final newName = editCtrl.text.trim();
               if (newName.isEmpty) return;
               if (_id != null) {
-                final rooms = StorageService.getRooms();
-                final idx = rooms.indexWhere((r) => r.id == _id);
-                if (idx >= 0) {
-                  final old = rooms[idx];
+                final room = StorageService.getRoom(_id!);
+                if (room != null) {
                   final updated = RoomModel(
-                    id: old.id, name: newName, type: old.type,
-                    qrData: old.qrData, createdAt: old.createdAt,
-                    creatorId: old.creatorId, description: old.description,
+                    id: room.id, name: newName, type: room.type,
+                    qrData: room.qrData, createdAt: room.createdAt,
+                    creatorId: room.creatorId, description: room.description,
                   );
                   StorageService.saveRoom(updated);
                 }
