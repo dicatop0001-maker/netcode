@@ -44,8 +44,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final myId = StorageService.getDeviceId();
     if (m.isPrivate && m.recipientId != myId && m.senderId != myId) return;
     if (_box.values.any((x) => x.id == m.id)) return;
-    _box.add(m);
-    _bottom();
+    _box.add(m); _bottom();
   }
 
   List<MessageModel> get _msgs {
@@ -136,10 +135,9 @@ class _ChatScreenState extends State<ChatScreen> {
       ListTile(leading: const Icon(Icons.public), title: const Text('Todos (publica)'),
         onTap: () { setState(() { _replyToUserId = null; _replyToNick = null; }); Navigator.pop(ctx); }),
       ...senders.map((e) => ListTile(
-        leading: const Icon(Icons.person),
-        title: Text(e.value),
+        leading: const Icon(Icons.person), title: Text(e.value),
         onTap: () { setState(() { _replyToUserId = e.key; _replyToNick = e.value; }); Navigator.pop(ctx); },
-      )),
+      )).toList(),
     ]));
   }
 
@@ -153,15 +151,32 @@ class _ChatScreenState extends State<ChatScreen> {
     widget.nearby.onMessageReceived = null; super.dispose();
   }
 
+  Widget _micOrSend() {
+    if (_txt.text.trim().isEmpty) {
+      return GestureDetector(
+        onLongPressStart: (_) => _startRecording(),
+        onLongPressEnd: (_) => _stopRecording(),
+        child: CircleAvatar(
+          backgroundColor: _isRecording ? Colors.red : AppTheme.primary,
+          child: Icon(_isRecording ? Icons.mic : Icons.mic_none, color: Colors.black, size: 20),
+        ),
+      );
+    }
+    return CircleAvatar(
+      backgroundColor: AppTheme.primary,
+      child: IconButton(icon: const Icon(Icons.send, color: Colors.black, size: 18), onPressed: _send),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(widget.room.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Text(
-          (widget.room.messageTtlHours < 8760
+          widget.room.messageTtlHours < 8760
             ? 'Msgs expiram em ' + widget.room.messageTtlHours.toString() + 'h'
-            : 'Mensagens permanentes'),
+            : 'Mensagens permanentes',
           style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
       ])),
       body: Column(children: [
@@ -203,35 +218,22 @@ class _ChatScreenState extends State<ChatScreen> {
           })),
         Container(color: AppTheme.surface,
           padding: const EdgeInsets.fromLTRB(4, 8, 8, 16),
-          child: ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _txt,
-            builder: (_, val, __) => Row(children: [
-              IconButton(icon: const Icon(Icons.image_outlined), onPressed: _img, color: AppTheme.textSecondary),
-              IconButton(
-                icon: Icon(_replyToNick != null ? Icons.lock : Icons.person_outline),
-                onPressed: () => _selectRecipient(context),
-                color: _replyToNick != null ? AppTheme.primary : AppTheme.textSecondary,
-                tooltip: 'Mensagem privada',
-              ),
-              Expanded(child: TextField(controller: _txt, maxLines: null,
-                textInputAction: TextInputAction.send, onSubmitted: (_) => _send(),
-                decoration: const InputDecoration(hintText: 'Mensagem...',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10)))),
-              const SizedBox(width: 4),
-              if (val.text.trim().isEmpty)
-                GestureDetector(
-                  onLongPressStart: (_) => _startRecording(),
-                  onLongPressEnd: (_) => _stopRecording(),
-                  child: CircleAvatar(
-                    backgroundColor: _isRecording ? Colors.red : AppTheme.primary,
-                    child: Icon(_isRecording ? Icons.mic : Icons.mic_none, color: Colors.black, size: 20),
-                  ),
-                )
-              else
-                CircleAvatar(backgroundColor: AppTheme.primary,
-                  child: IconButton(icon: const Icon(Icons.send, color: Colors.black, size: 18), onPressed: _send)),
-            ])),
-          )),
+          child: Row(children: [
+            IconButton(icon: const Icon(Icons.image_outlined), onPressed: _img, color: AppTheme.textSecondary),
+            IconButton(
+              icon: Icon(_replyToNick != null ? Icons.lock : Icons.person_outline),
+              onPressed: () => _selectRecipient(context),
+              color: _replyToNick != null ? AppTheme.primary : AppTheme.textSecondary,
+              tooltip: 'Mensagem privada',
+            ),
+            Expanded(child: TextField(controller: _txt, maxLines: null,
+              textInputAction: TextInputAction.send, onSubmitted: (_) => _send(),
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(hintText: 'Mensagem...',
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10)))),
+            const SizedBox(width: 4),
+            _micOrSend(),
+          ])),
       ]),
     );
   }
@@ -261,7 +263,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 onTap: () { if (m.audioPath != null) _playAudio(m.audioPath!); },
                 child: const Icon(Icons.play_circle, size: 32, color: AppTheme.primary)),
               const SizedBox(width: 4),
-              const Text('Segurar para ouvir', style: TextStyle(fontSize: 10)),
+              const Text('Toque para ouvir', style: TextStyle(fontSize: 10)),
             ]),
           ]),
         ]),
