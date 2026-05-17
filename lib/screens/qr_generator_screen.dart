@@ -14,21 +14,39 @@ class QrGeneratorScreen extends StatefulWidget {
 
 class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
   final _nameCtrl = TextEditingController();
-  RoomType _type = RoomType.bairro;
+  final _ambienteCtrl = TextEditingController();
+  String _customAmbiente = '';
   String? _qr, _id, _name;
   bool _isCreator = false;
+  bool _generated = false;
 
   void _generate() {
     if (_nameCtrl.text.trim().isEmpty) return;
     final id = const Uuid().v4().substring(0, 12);
     final name = _nameCtrl.text.trim();
-    final qr = 'mesh://${_type.name}-$id';
+    final tipoLabel = _customAmbiente.trim().isNotEmpty
+        ? _customAmbiente.trim()
+        : 'Geral';
+    final qr = 'mesh://custom-' + id;
     final room = RoomModel(
-      id: id, name: name, type: _type.name, qrData: qr, createdAt: DateTime.now(),
+      id: id,
+      name: name,
+      type: tipoLabel,
+      qrData: qr,
+      createdAt: DateTime.now(),
       creatorId: StorageService.getDeviceId(),
+      description: tipoLabel,
     );
     StorageService.saveRoom(room);
-    setState(() { _qr = qr; _id = id; _name = name; _isCreator = true; });
+    setState(() {
+      _qr = qr;
+      _id = id;
+      _name = name;
+      _isCreator = true;
+      _generated = true;
+    });
+    // Volta para a Home ja com a sala criada
+    Navigator.pop(context, room);
   }
 
   void _deleteRoom() {
@@ -36,7 +54,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Apagar Sala?'),
-        content: Text('Tem certeza que deseja apagar a sala "$_name"? Esta acao nao pode ser desfeita.'),
+        content: Text('Tem certeza que deseja apagar a sala "' + (_name ?? '') + '"?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           TextButton(
@@ -99,166 +117,142 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
 
   void _shareRoom() {
     if (_qr == null) return;
-    final link = 'netcode://sala/$_id';
-    Share.share('Entre na sala "$_name" no Netcode!\n\nLink: $link\n\nQR Data: $_qr');
+    final link = 'netcode://sala/' + (_id ?? '');
+    Share.share('Entre na sala "' + (_name ?? '') + '" no Netcode!\n\nLink: ' + link + '\n\nQR Data: ' + (_qr ?? ''));
   }
 
   void _copyLink() {
     if (_id == null) return;
-    final link = 'netcode://sala/$_id';
+    final link = 'netcode://sala/' + (_id ?? '');
     Clipboard.setData(ClipboardData(text: link));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Link copiado!')));
   }
 
-  @override void dispose() { _nameCtrl.dispose(); super.dispose(); }
+  @override void dispose() {
+    _nameCtrl.dispose();
+    _ambienteCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Criar Sala'),
-        actions: [
-          if (_qr != null && _isCreator) ...[
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, color: Colors.blue),
-              tooltip: 'Editar Nome da Sala',
-              onPressed: _editRoomName,
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              tooltip: 'Apagar Sala',
-              onPressed: _deleteRoom,
-            ),
-          ],
-        ],
       ),
-      body: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Tipo de ambiente', style: TextStyle(fontWeight: FontWeight.w600,
-            fontSize: 14, color: AppTheme.textSecondary)),
-          const SizedBox(height: 10),
-          SizedBox(height: 48, child: ListView(scrollDirection: Axis.horizontal,
-            children: RoomType.values.map((t) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text('${t.emoji} ${t.label}'), selected: _type == t,
-                onSelected: (_) => setState(() => _type = t),
-                selectedColor: AppTheme.primary,
-                labelStyle: TextStyle(
-                  color: _type == t ? Colors.black : AppTheme.textPrimary, fontSize: 12)),
-            )).toList())),
-          const SizedBox(height: 16),
-          // Botao criar ambiente especifico
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                const Icon(Icons.add_location_alt_outlined, color: AppTheme.primary, size: 20),
-                const SizedBox(width: 8),
-                const Text('Criar Ambiente', style: TextStyle(
-                  fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.primary)),
-              ]),
-              const SizedBox(height: 4),
-              const Text(
-                'Crie um ambiente especifico: manifestacao na avenida, show, feira, emergencia e muito mais.',
-                style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Tipo de ambiente - titulo
+            const Text('Tipo de ambiente',
+              style: TextStyle(fontWeight: FontWeight.w600,
+                fontSize: 14, color: AppTheme.textSecondary)),
+            const SizedBox(height: 6),
+            // Nome do ambiente digitado aparece aqui
+            if (_customAmbiente.trim().isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
+                  const SizedBox(width: 4),
+                  Text(_customAmbiente.trim(),
+                    style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13)),
+                ]),
               ),
-              const SizedBox(height: 10),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                RoomType.protesto, RoomType.evento, RoomType.show,
-                RoomType.emergencia, RoomType.feira, RoomType.carnaval,
-              ].map((t) => ActionChip(
-                avatar: Text(t.emoji),
-                label: Text(t.label, style: const TextStyle(fontSize: 11)),
-                backgroundColor: _type == t ? AppTheme.primary : null,
-                labelStyle: TextStyle(
-                  color: _type == t ? Colors.black : AppTheme.textPrimary),
-                onPressed: () => setState(() => _type = t),
-              )).toList()),
-            ]),
-          ),
-          const SizedBox(height: 16),
-          TextField(controller: _nameCtrl, decoration: const InputDecoration(
-            labelText: 'Nome da sala',
-            hintText: 'Ex: Bairro Centro, Show Rock...',
-            prefixIcon: Icon(Icons.location_on_outlined))),
-          const SizedBox(height: 20),
-          SizedBox(width: double.infinity, child: ElevatedButton.icon(
-            icon: const Icon(Icons.qr_code),
-            label: const Text('Gerar QR Code'), onPressed: _generate)),
-          if (_qr != null) ...[
-            const SizedBox(height: 32),
-            Center(child: Column(children: [
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(_name ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                if (_isCreator) ...[
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _editRoomName,
-                    child: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
-                  ),
-                ],
-              ]),
-              const SizedBox(height: 4),
-              Text('${_type.emoji} ${_type.label}',
-                style: const TextStyle(color: AppTheme.textSecondary)),
-              const SizedBox(height: 20),
-              Container(padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                child: QrImageView(data: _qr!, version: QrVersions.auto,
-                  size: 220, backgroundColor: Colors.white)),
               const SizedBox(height: 12),
-              Text(_qr!, style: const TextStyle(fontSize: 11,
-                color: AppTheme.textSecondary, fontFamily: 'monospace')),
-              const SizedBox(height: 16),
-              // Botoes de compartilhamento (qualquer membro da sala pode usar)
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.share),
-                  label: const Text('Compartilhar'),
-                  onPressed: _shareRoom),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.link),
-                  label: const Text('Copiar Link'),
-                  onPressed: _copyLink),
-              ]),
-              const SizedBox(height: 8),
-              const Text('Qualquer membro pode compartilhar o QR Code ou link',
-                style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                textAlign: TextAlign.center),
-              if (_isCreator) ...[
-                const SizedBox(height: 16),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.blue),
-                      foregroundColor: Colors.blue),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Editar Nome'),
-                    onPressed: _editRoomName),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                      foregroundColor: Colors.red),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Apagar Sala'),
-                    onPressed: _deleteRoom),
+            ],
+            // Card Criar Ambiente
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Row(children: [
+                  Icon(Icons.add_location_alt_outlined, color: AppTheme.primary, size: 20),
+                  SizedBox(width: 8),
+                  Text('Criar Ambiente',
+                    style: TextStyle(fontWeight: FontWeight.w700,
+                      fontSize: 15, color: AppTheme.primary)),
                 ]),
                 const SizedBox(height: 4),
-                const Text('Apenas o criador pode editar ou apagar a sala',
-                  style: TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
-              ],
-            ])),
+                const Text(
+                  'Crie um ambiente especifico: manifestacao na avenida, show, feira, emergencia e muito mais.',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _ambienteCtrl,
+                  onChanged: (v) => setState(() => _customAmbiente = v),
+                  decoration: InputDecoration(
+                    hintText: 'Ex: Manifestacao na Av. Paulista, Show de Rock...',
+                    labelText: 'Nome do ambiente',
+                    prefixIcon: const Icon(Icons.edit_location_alt_outlined),
+                    filled: true,
+                    fillColor: AppTheme.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppTheme.primary.withOpacity(0.3)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppTheme.primary),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nome da sala',
+                hintText: 'Ex: Bairro Centro, Show Rock...',
+                prefixIcon: Icon(Icons.location_on_outlined))),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.qr_code),
+                label: const Text('Gerar QR Code e Ir para Home'),
+                onPressed: _nameCtrl.text.trim().isNotEmpty ? _generate : null,
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Ouvinte para habilitar botao ao digitar
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _nameCtrl,
+              builder: (_, val, __) {
+                return val.text.trim().isEmpty
+                  ? const Center(
+                      child: Text('Digite o nome da sala para continuar',
+                        style: TextStyle(fontSize: 11, color: AppTheme.textSecondary,
+                          fontStyle: FontStyle.italic)))
+                  : const SizedBox.shrink();
+              },
+            ),
           ],
-        ])));
+        ),
+      ),
+    );
   }
 }
