@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         NavigationDestination(icon: Icon(Icons.chat_bubble_outline),
                                                                           selectedIcon: Icon(Icons.chat_bubble), label: 'Salas'),
                                         NavigationDestination(icon: Icon(Icons.storefront_outlined),
-                                                                          selectedIcon: Icon(Icons.storefront), label: 'Parque Place Local'),
+                                                                          selectedIcon: Icon(Icons.storefront), label: 'Compra e Venda Local'),
                                       ],
                           ),
                 );
