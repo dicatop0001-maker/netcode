@@ -9,6 +9,7 @@ import 'qr_generator_screen.dart';
 import 'marketplace_screen.dart';
 import 'settings_screen.dart';
 import 'chat_screen.dart';
+import 'event_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +24,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override void initState() { super.initState(); _nearby.init(); }
   @override void dispose() { _nearby.stop(); super.dispose(); }
 
+  void _openRoom(RoomModel room) {
+    StorageService.setCurrentRoom(room);
+    _nearby.joinRoom(room);
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => room.isEvent
+        ? EventScreen(room: room, nearby: _nearby)
+        : ChatScreen(room: room, nearby: _nearby)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,25 +40,25 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.wifi_tethering_rounded, color: AppTheme.primary, size: 22),
           SizedBox(width: 8),
-          Text('netcode', style: TextStyle(fontWeight: FontWeight.w900,
-            color: AppTheme.primary, fontSize: 20)),
+          Text('netcode', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, fontSize: 20)),
         ]),
         actions: [
           StreamBuilder<int>(
             stream: _nearby.peerCountStream, initialData: 0,
-            builder: (_, s) => Padding(padding: const EdgeInsets.only(right: 8),
+            builder: (_, s) => Padding(
+              padding: const EdgeInsets.only(right: 4),
               child: Chip(
                 label: Text(s.data.toString() + ' online',
                   style: const TextStyle(fontSize: 11, color: Colors.black)),
                 backgroundColor: s.data! > 0 ? AppTheme.primary : AppTheme.surfaceLight,
                 padding: EdgeInsets.zero))),
-          IconButton(icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()))),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
         ],
       ),
       body: IndexedStack(index: _tab, children: [
-        RoomListWidget(key: _roomListKey, nearby: _nearby),
+        RoomListWidget(key: _roomListKey, nearby: _nearby, onRoomTap: _openRoom),
         const MarketplaceScreen(),
       ]),
       floatingActionButton: FloatingActionButton.extended(
@@ -70,36 +80,36 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _joinOptions(BuildContext ctx) {
-    showModalBottomSheet(context: ctx, backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(padding: const EdgeInsets.all(24),
+    showModalBottomSheet(
+      context: ctx, backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4, decoration: BoxDecoration(
             color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 20),
-          const Text('Entrar ou Criar Sala',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Entrar ou Criar Sala', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
-          _Tile(icon: Icons.qr_code_scanner, title: 'Escanear QR Code',
+          _Tile(
+            icon: Icons.qr_code_scanner, title: 'Escanear QR Code',
             sub: 'Entrar em sala existente',
-            onTap: () { Navigator.pop(ctx); Navigator.push(ctx,
-              MaterialPageRoute(builder: (_) => QrScannerScreen(nearby: _nearby))); }),
+            onTap: () {
+              Navigator.pop(ctx);
+              Navigator.push(ctx, MaterialPageRoute(builder: (_) => QrScannerScreen(nearby: _nearby)));
+            }),
           const SizedBox(height: 12),
-          _Tile(icon: Icons.add_circle_outline, title: 'Criar nova sala',
-            sub: 'Gerar QR Code para o ambiente',
+          _Tile(
+            icon: Icons.add_circle_outline, title: 'Criar nova sala',
+            sub: 'Sala de chat ou evento com QR Code',
             onTap: () async {
               Navigator.pop(ctx);
               final room = await Navigator.push<RoomModel>(ctx,
                 MaterialPageRoute(builder: (_) => const QrGeneratorScreen()));
-              // Ao retornar com a sala criada, atualiza lista e abre o chat
               if (room != null && mounted) {
                 _roomListKey.currentState?.reload();
                 setState(() => _tab = 0);
-                StorageService.setCurrentRoom(room);
-                _nearby.joinRoom(room);
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => ChatScreen(room: room, nearby: _nearby)));
+                _openRoom(room);
               }
             }),
           const SizedBox(height: 20),
@@ -115,8 +125,7 @@ class _Tile extends StatelessWidget {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     tileColor: AppTheme.surfaceLight,
     leading: Container(width: 44, height: 44,
-      decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
       child: Icon(icon, color: AppTheme.primary)),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
     subtitle: Text(sub, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
