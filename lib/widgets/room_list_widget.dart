@@ -3,11 +3,11 @@ import '../theme/app_theme.dart';
 import '../models/room_model.dart';
 import '../services/storage_service.dart';
 import '../services/nearby_service.dart';
-import '../screens/chat_screen.dart';
 
 class RoomListWidget extends StatefulWidget {
   final NearbyService nearby;
-  const RoomListWidget({super.key, required this.nearby});
+  final void Function(RoomModel)? onRoomTap;
+  const RoomListWidget({super.key, required this.nearby, this.onRoomTap});
   @override State<RoomListWidget> createState() => RoomListWidgetState();
 }
 
@@ -26,7 +26,7 @@ class RoomListWidgetState extends State<RoomListWidget> {
         const SizedBox(height: 16),
         const Text('Nenhuma sala', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Escaneie ou crie um QR Code\npara entrar na rede local.',
+        const Text('Escaneie ou crie um QR Code para entrar na rede local.',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppTheme.textSecondary)),
       ]));
@@ -38,9 +38,8 @@ class RoomListWidgetState extends State<RoomListWidget> {
         itemCount: _rooms.length,
         itemBuilder: (_, i) {
           final r = _rooms[i];
-          // Tenta mapear o tipo para emoji; se nao encontrar usa o description como label
           final t = RoomType.values.where((t) => t.name == r.type).firstOrNull;
-          final emoji = t?.emoji ?? '\u{1F4E1}';
+          final emoji = r.isEvent ? '\u{1F3AA}' : (t?.emoji ?? '\u{1F4E1}');
           final label = t?.label ?? r.type;
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
@@ -48,27 +47,36 @@ class RoomListWidgetState extends State<RoomListWidget> {
               leading: Container(
                 width: 44, height: 44,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.15),
+                  color: r.isEvent
+                    ? Colors.orange.withOpacity(0.15)
+                    : AppTheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10)),
                 child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22)))),
-              title: Text(r.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Row(children: [
+                Expanded(child: Text(r.name, style: const TextStyle(fontWeight: FontWeight.bold))),
+                if (r.isEvent)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8)),
+                    child: const Text('EVENTO', style: TextStyle(fontSize: 9, color: Colors.orange, fontWeight: FontWeight.bold))),
+              ]),
               subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label,
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                 Row(children: [
-                  const Icon(Icons.chat_bubble_outline, size: 11, color: AppTheme.primary),
+                  Icon(r.isEvent ? Icons.event : Icons.chat_bubble_outline,
+                    size: 11, color: AppTheme.primary),
                   const SizedBox(width: 3),
-                  const Text('Toque para abrir o chat',
-                    style: TextStyle(fontSize: 10, color: AppTheme.primary,
-                      fontStyle: FontStyle.italic)),
+                  Text(r.isEvent ? 'Toque para ver o evento' : 'Toque para abrir o chat',
+                    style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontStyle: FontStyle.italic)),
                 ]),
               ]),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                StorageService.setCurrentRoom(r);
-                widget.nearby.joinRoom(r);
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => ChatScreen(room: r, nearby: widget.nearby)));
+                if (widget.onRoomTap != null) {
+                  widget.onRoomTap!(r);
+                }
               },
             ),
           );
