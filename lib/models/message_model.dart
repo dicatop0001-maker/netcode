@@ -13,15 +13,22 @@ class MessageModel extends HiveObject {
   @HiveField(7) String? imagePath;
   @HiveField(8) bool forwarded = false;
   @HiveField(9) List<String> seenBy = [];
+  @HiveField(10) String? audioPath;
+  @HiveField(11) String messageType = 'text';
+  @HiveField(12) String? recipientId;
 
   MessageModel({
     required this.id, required this.roomId, required this.senderId,
     required this.senderNick, required this.text, required this.createdAt,
     required this.expiresAt, this.imagePath, this.forwarded = false,
-    List<String>? seenBy,
+    List<String>? seenBy, this.audioPath,
+    this.messageType = 'text', this.recipientId,
   }) : seenBy = seenBy ?? [];
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
+  bool get isAudio => messageType == 'audio';
+  bool get isImage => messageType == 'image';
+  bool get isPrivate => recipientId != null && recipientId!.isNotEmpty;
 
   Map<String, dynamic> toJson() => {
     'id': id, 'roomId': roomId, 'senderId': senderId,
@@ -29,6 +36,8 @@ class MessageModel extends HiveObject {
     'createdAt': createdAt.toIso8601String(),
     'expiresAt': expiresAt.toIso8601String(),
     'imagePath': imagePath, 'forwarded': forwarded, 'seenBy': seenBy,
+    'audioPath': audioPath, 'messageType': messageType,
+    'recipientId': recipientId,
   };
 
   factory MessageModel.fromJson(Map<String, dynamic> j) => MessageModel(
@@ -38,5 +47,8 @@ class MessageModel extends HiveObject {
     expiresAt: DateTime.parse(j['expiresAt']),
     imagePath: j['imagePath'], forwarded: j['forwarded'] ?? false,
     seenBy: List<String>.from(j['seenBy'] ?? []),
+    audioPath: j['audioPath'],
+    messageType: j['messageType'] ?? 'text',
+    recipientId: j['recipientId'],
   );
 }
